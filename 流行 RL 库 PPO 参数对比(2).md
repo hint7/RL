@@ -1,0 +1,10 @@
+| 参数 | 动手学 RL | SB3 | tianshou | rsl_rl | skrl |
+| --- | --- | --- | --- | --- | --- |
+| branch / commit | main / 4a151a4b | master / 3246f506 | master / f2402056 | main / 00e13d1a | main / d19e5ed9 |
+| rollout_buffer 名称。长度限制。 | transition_dict 充当。无默认长度限制，收集直到一局 episode 结束 | RolloutBuffer（或 DictRolloutBuffer）。固定容量 n_steps（默认 2048）× n_envs | ReplayBuffer / VectorReplayBuffer 充当 。buffer_size 为最大容量（mujoco 示例默认 4096），每次 collection 收集 collection_step_num_env_steps 步（默认 2048） | RolloutStorage。固定容量 num_steps_per_env（示例常用 24）× num_envs | Memory（如 RandomMemory）。memory_size 需与 rollouts 一致（默认 16）× num_envs |
+| 旧策略 π(θ_k) 保持不变的时间步 | 一局 episode，与 episode 长度有关 | n_steps 步/环境（默认 2048），与 episode 长度无关 | 一次 collection 的 collection_step_num_env_steps 步/环境（默认 2048），与 episode 长度无关 | 一次 iteration 的 num_steps_per_env 步/环境（配置项，示例常用 24），与 episode 长度无关 | rollouts 步/环境（默认 16），与 episode 长度无关 |
+| rollout_buffer 每步收集哪些信息 | states, <br/>actions, <br/>rewards, <br/>next_states, <br/>dones | observations, <br/>actions, <br/>rewards, <br/>episode_starts, <br/>values, <br/>log_probs,<br/>（GAE 后追加 advantages, returns；不存 next_obs/dones） | obs, <br/>act, <br/>rew, <br/>terminated, <br/>truncated, <br/>done, <br/>obs_next, <br/>info, <br/>policy；<br/>更新前由 critic 算 v_s，由 policy 算 logp_old | observations, <br/>actions, <br/>rewards, <br/>dones, <br/>values, <br/>actions_log_prob, <br/>distribution_params,<br/>（GAE 后追加 returns, advantages；不存 next_obs） | observations,<br/>states, <br/>actions, <br/>rewards, <br/>terminated, <br/>truncated, <br/>log_prob, <br/>values<br/>（更新前算 returns, advantages；不存 next_obs） |
+| batch | 无 | 一次 rollout 全量数据：n_steps × n_envs（默认 2048×n_envs），用于 n_epochs 轮更新 | 一次 collection 收集的全量 transition（默认约 2048×n_envs 条） | 一次 iteration 全量数据：num_steps_per_env × num_envs | 一次 update 前 memory 全量：rollouts × num_envs（默认 16×n_envs） |
+| mini_batch | 无 | batch_size（默认 64），n_epochs 轮内 shuffle 切分 | batch_size（默认 64），update_step_num_repetitions 轮内切分；设为 None 则整批更新 | 由 num_mini_batches（默认 4）均分全量 batch | 由 mini_batches（默认 2）均分全量 batch |
+
+
