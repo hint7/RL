@@ -35,9 +35,12 @@ $`s_0, a_0, r_1, s_1, a_1, r_2, \ldots, s_{T-1}, a_{T-1}, r_T`$
 
 通过对未来奖励进行折扣，定义<font style="color:#DF2A3F;">回报 </font>$`G_t`$为随时间加权的奖励之和：
 
-$$
-\begin{aligned} G_t &= \sum_{i=t}^T \gamma^{(i-t)} R_{i+1} \\&= R_{t+1}+\gamma\;R_{t+2}+\gamma^2\;R_{t+3}+...+\gamma^{T-t}\;R_T\end{aligned}
-$$
+```math
+\begin{aligned}
+G_t &= \sum_{i=t}^T \gamma^{(i-t)} R_{i+1} \\
+    &= R_{t+1}+\gamma\;R_{t+2}+\gamma^2\;R_{t+3}+...+\gamma^{T-t}\;R_T
+\end{aligned}
+```
   
 其中，$`\gamma`$是一个介于 0 和 1 之间的折扣因子，旨在平衡当前奖励与未来奖励的相对权重。$`\gamma`$越接近 1，越强调长期奖励，但设得过于接近 1 可能会影响训练性能。
 
@@ -54,7 +57,7 @@ $$
 
 在观测到$`S_t=s_t, A_t=a_t`$的条件下，$`G_t`$相对于$`S_{t+1}, A_{t+1}, \cdots, S_T, A_T`$的期望，
 
-$$
+```math
 \begin{aligned}
 Q^\pi(s_t, a_t)
 &= \mathbb{E}\!\left[ G_t \mid S_t = s_t,\; A_t = a_t \right] \\
@@ -65,7 +68,7 @@ A_i \sim \pi(\cdot \mid S_i),\; i \ge t+1
 }}
 \!\left[ G_t \mid S_t = s_t,\; A_t = a_t \right].
 \end{aligned}
-$$
+```
 
 $`Q^\pi`$依赖于$`s_t`$、$`a_t`$以及$`\pi`$，但不依赖于时间$`t+1`$及之后的状态和动作。
 
@@ -101,12 +104,12 @@ $`V^\pi`$依赖于$`s_t`$、$`\pi`$，与$`a_t`$无关。
 
 $`V^\pi`$也能写成：
 
-$$
+```math
 \begin{aligned}
 V^\pi\left(s_t\right)
 &= \mathbb{E}_{ A_{t},S_{t+1}, A_{t+1}, \cdots, S_T, A_T}\!\left[ G_t \mid S_t = s_t\; \right] \\
 \end{aligned}
-$$
+```
 
 进一步地，$`\mathbb{E}_S\left[V^\pi(S)\right]`$依赖于$`\pi`$，与$`s_t`$、$`a_t`$无关。
 
@@ -375,14 +378,14 @@ $`J(\theta) = \mathbb{E}_{S \sim V^{\pi_{\text{old}}}} \Bigg[ \mathbb{E}_{A \sim
 
 对目标函数$`J({\theta})`$作差：
 
-$$
+```math
 \begin{aligned}
 J\left(\theta\right)-J(\theta_{old}) & =\mathbb{E}_{S}\left[V^{\pi_{\theta}}\left(S\right)\right]-\mathbb{E}_{S}\left[V^{\pi_{\theta_{old}}}\left(S\right)\right] \\
 & =\frac{1}{1-\gamma} \mathbb{E}_{s \sim \nu ^{\pi_{\theta}}} \mathbb{E}_{a \sim \pi_{\theta}(\cdot \mid s)}\left[A^{\pi_{\theta_{old}}}(s, a)\right]
 \end{aligned}
-$$
+```
 
- ^{证明见(注5-3)}
+$`^{证明见(注5-3)}`$
 
 只要能找到一个新策略，使得该式>0，就能保证策略性能单调递增。
 
@@ -414,12 +417,12 @@ $`D_{KL}(\pi_{\theta_{old}} \parallel \pi_\theta) \approx \frac{1}{2} (\theta - 
 
 这样问题就变成了**一个带二次约束的一阶线性优化问题**：
 
-$$
+```math
 \begin{aligned}
 \max_{\Delta \theta} \quad & g^T \Delta \theta \\
 \text{s.t.} \quad & \frac{1}{2} \Delta \theta^T F \Delta \theta \le \delta
 \end{aligned}
-$$
+```
 
 使用卡罗需-库恩-塔克（Karush-Kuhn-Tucker，KKT）条件可以直接得到这个问题的答案（也可以用拉格朗日乘子法求解）：
 $`\Delta \theta = \frac{\sqrt{2 \delta}}{\sqrt{g^T F^{-1} g}} \, F^{-1} g`$
@@ -493,7 +496,7 @@ $`\hat{A}^{(1)}(s_t,a_t),\quad \hat{A}^{(2)}(s_t,a_t),\quad \hat{A}^{(3)}(s_t,a_
 
 <font style="color:#DF2A3F;">广义优势估计即把所有</font>$`\hat{A}^{(k)}(s_t,a_t)`$<font style="color:#DF2A3F;">做指数加权平均 来估计优势函数：</font>
 
-$$
+```math
 \begin{aligned}
 \hat{A}_t^{\text{GAE}} 
 &=
@@ -509,11 +512,11 @@ $$
 \gamma\lambda
 \hat{A}_{t+1}^{\mathrm{GAE}}
 \end{aligned}
-$$
+```
 
 第二个等号证明
 
-$$
+```math
 \begin{aligned}
 \hat{A}_t^{\mathrm{GAE}(\gamma,\lambda)}
 &:= (1-\lambda)\left(
@@ -541,7 +544,7 @@ $$
 &=\delta_t^V+\gamma\lambda\delta_{t+1}^V+(\gamma\lambda)^2\delta_{t+2}^V + ...\\
 &= \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}^V
 \end{aligned}
-$$
+```
 
 第三个等号证明，把$`\hat{A}_t^{\mathrm{GAE}(\gamma,\lambda)}=\delta_t^V+\gamma\lambda\delta_{t+1}^V+(\gamma\lambda)^2\delta_{t+2}^V + ...`$中的$`t`$换成$`t+1`$代入$`\hat{A}_{t+1}^{\mathrm{GAE}}`$即可。
 
@@ -627,25 +630,25 @@ openAI 官网把 min 式写为等价形式去掉 clip：
 
 $`\min(\rho A,\operatorname{clip}(\rho,1-\epsilon,1+\epsilon)A)=\min(\rho A,g(\epsilon,A))`$，其中：
 
-$$
+```math
 g(\epsilon,A)=
 \begin{cases}
 (1 + \epsilon) A, & A \ge 0, \\
 (1 - \epsilon) A, & A < 0.
 \end{cases}
-$$
+```
 
 <font style="color:#DF2A3F;">上式可以写成</font>$`min（\rho\cdot A,\quad clip(\rho,1-\epsilon,1+\epsilon)\cdot A)=min（\rho\cdot A,\quad (1 \pm \epsilon) A)`$<font style="color:#DF2A3F;">,其中</font>$`\pm`$<font style="color:#DF2A3F;">当 A 正时取正，A 负取负</font>
 
 min 式的另一种等价形式则可以把 A 提出 min，且去掉 clip， 需要注意 A 为负的时候 min 变为 max：
 
-$$
+```math
 \min(\rho A,\operatorname{clip}(\rho,1-\epsilon,1+\epsilon)A)=
 \begin{cases}
 |A|\min(\rho,1 + \epsilon), & A \ge 0, \\
 -|A|\max(\rho,1 - \epsilon), & A < 0.
 \end{cases}
-$$
+```
 
 可以做出$`\rho`$-min 式值 的图，注意**纵轴单位是 |A**|：
 
@@ -680,7 +683,7 @@ $$
 >
 > **7.** 通过最大化 PPO-Clip 目标更新策略：
 >
-> $$
+> ```math
 > \begin{aligned}
 > &\theta_{k+1} = \arg\max_\theta \frac{1}{T} \sum_{t=0}^{T-1} \min \left(
 >   \frac{\pi_\theta(a_t\mid s_t)}{\pi_{\theta_k}(a_t\mid s_t)} \hat{A}_t^{\text{GAE}},\ 
@@ -691,7 +694,7 @@ $$
 >   (1\pm\epsilon) \hat{A}_0^{\text{GAE}}\right) + \min \left( \frac{\pi_\theta(a_1\mid s_1)}{\pi_{\theta_k}(a_1\mid s_1)} \hat{A}_1^{\text{GAE}},\ 
 >   (1\pm\epsilon) \hat{A}_1^{\text{GAE}}\right) + \cdots \Big\}
 > \end{aligned}
-> $$
+> ```
 >
 > 式中$`(1\pm\epsilon)`$的正负号与$`\hat{A}_t^{\text{GAE}}`$同号。通常把$`\dfrac{\pi_\theta(a_t\mid s_t)}{\pi_{\theta_k}(a_t\mid s_t)}`$恒等变换为$`\exp\bigl(\log\pi_\theta(a_t\mid s_t)-\log\pi_{\theta_k}(a_t\mid s_t)\bigr)`$。log 使数值稳定，避免太接近 0 的概率被当做 0 处理$`^{(注 10) }`$。
 >
@@ -699,13 +702,13 @@ $$
 >
 > 最大化用带 Adam 的随机梯度上升实现；算一次梯度要对$`T`$个$`\min`$式各自选起作用的分支再反向传播求梯度。若选到了被clip的分支（A为正$`\rho`$太大 或 A为负$`\rho`$太小），对$`\theta`$梯度为0；若选到了没被clip的分支，梯度为$`\dfrac{\hat{A}_t^{\text{GAE}}}{\pi_{\theta_k}(a_t\mid s_t)} \nabla_{\theta} \pi_\theta(a_t\mid s_t)`$，即：
 >
-> $$
+> ```math
 > \nabla_{\theta} min()=
 > \begin{cases} 
 >     &\qquad\qquad\qquad\qquad\qquad\qquad0,  \quad&if \; clip \\
 >     &\hat{A}_t^{\text{GAE}} \cdot exp\bigl(\log\pi_\theta(a_t\mid s_t)-\log\pi_{\theta_k}(a_t\mid s_t)\bigr) \cdot \nabla_{\theta} \log\pi_\theta(a_t\mid s_t),  \quad &else
 > \end{cases} 
-> $$
+> ```
 >
 > **8.** 通过对均方误差回归拟合价值网络：
 > $`\omega_{k+1} = \arg\min_\omega \frac{1}{T} \sum_{t=0}^{T-1} \left( v(s_t;\omega) - \hat{G}_t \right)^2`$
@@ -741,11 +744,11 @@ $`\mathbb{E}_{(s_t,a_t)\sim \pi_{\theta_{\text{old}}}}[min()] \approx \frac{1}{T
 >
 > **5.** 基于第 4 步缓存的 `values_old`，对每个环境轨迹分别做 GAE，得到优势$`\hat{A}_{t}^{(i)}`$：
 >
-> $$
+> ```math
 > \hat{A}_{t}^{(i)}=\delta_{t}^{(i)}+\gamma\lambda(1-\text{done}_t^{(i)})\hat{A}_{t+1}^{(i)},
 > \quad\\
 > \delta_t^{(i)}=R_{t+1}^{(i)}+\gamma(1-\text{done}_t^{(i)})v(s_{t+1}^{(i)};\omega_k)-v(s_t^{(i)};\omega_k).
-> $$
+> ```
 >
 > **6.** 计算目标价值（return / value target）：
 > $`\hat{G}_{t}^{(i)}=\hat{A}_{t}^{(i)}+v(s_t^{(i)};\omega_k).`$
@@ -1287,7 +1290,7 @@ Function representation
 
 ### (注 5-2) 目标函数重要性采样证明
 
-$$
+```math
 \begin{aligned}
 V_\pi(s)
 &= \mathbb{E}_{A \sim \pi(\cdot \mid s ; \boldsymbol{\theta})}\left[Q_\pi(s, A)\right] \\
@@ -1297,7 +1300,7 @@ V_\pi(s)
 &= \mathbb{E}_{A \sim \pi\left(\cdot \mid s ; \boldsymbol{\theta}_{\text {old }}\right)}\left[
 \frac{\pi(A \mid s ; \boldsymbol{\theta}_{\text{new }})}{\pi\left(A \mid s ; \boldsymbol{\theta}_{\text {old }}\right)} \cdot Q_\pi(s, A)\right].
 \end{aligned}
-$$
+```
 
 ### (注 5-3) 目标函数差值等式证明
  见动手学 11.2
@@ -1346,14 +1349,14 @@ KL=0 → 两个分布完全一样
 3. 两者的差  
 信息损失：
 
-$$
+```math
 \begin{aligned}
 H(P,Q)-H(P)
 &=-\sum_x P(x)\log Q(x)+\sum_x P(x)\log P(x) \\
 &=\sum_x P(x)\log\frac{P(x)}{Q(x)} \\
 &=D_{KL}(P\parallel Q).
 \end{aligned}
-$$
+```
 
 **四、KL 散度的改进：杰森-香农散度 (Jensen-Shannon Divergence, JSD)**
 
@@ -1384,7 +1387,7 @@ Hessian 矩阵（黑塞矩阵，海森矩阵）是一个由函数的二阶偏导
 $`H(f)_{ij} = \frac{\partial^2 f}{\partial x_i \partial x_j}`$
 写成矩阵形式如下：
 
-$$
+```math
 H(f) = 
 \begin{bmatrix}
     \frac{\partial^2 f}{\partial x_1^2} & \frac{\partial^2 f}{\partial x_1 \partial x_2} & \cdots & \frac{\partial^2 f}{\partial x_1 \partial x_n} \\
@@ -1392,7 +1395,7 @@ H(f) =
     \vdots & \vdots & \ddots & \vdots \\
     \frac{\partial^2 f}{\partial x_n \partial x_1} & \frac{\partial^2 f}{\partial x_n \partial x_2} & \cdots & \frac{\partial^2 f}{\partial x_n^2}
 \end{bmatrix}
-$$
+```
 
 注意：如果函数$`f`$的二阶偏导数连续（即满足 Clairaut 定理），则混合偏导数相等（$`\frac{\partial^2 f}{\partial x_i \partial x_j} = \frac{\partial^2 f}{\partial x_j \partial x_i}`$），此时 Hessian 矩阵是对称矩阵。
 
@@ -1520,23 +1523,23 @@ _(如果是估计 Q 值，则 _$`\delta_t = R_{t+1} + \gamma Q(S_{t+1}, A_{t+1})
 
 累积迹 (Accumulating Trace) - 最常用：
 
-$$
+```math
 E_t(s) = 
 \begin{cases} 
 \gamma \lambda E_{t-1}(s) + 1 & \text{if } s = S_t \\
 \gamma \lambda E_{t-1}(s) & \text{if } s \neq S_t 
 \end{cases}
-$$
+```
 
 替换迹 (Replacing Trace) - 有时性能更好：
 
-$$
+```math
 E_t(s) = 
 \begin{cases} 
 1 & \text{if } s = S_t \\
 \gamma \lambda E_{t-1}(s) & \text{if } s \neq S_t 
 \end{cases}
-$$
+```
 
 B. 更新规则（实际执行版）  
 在每一步$`t`$，计算出$`\delta_t`$后，对所有状态$`s`$进行更新：
