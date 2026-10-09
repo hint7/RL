@@ -1,30 +1,29 @@
 **前言**
 
-没有大模型的逐步指导，我应该永远学不会强化学习；然而大模型的发明部分依赖强化学习。这就引申出一个猜想，如果我的研究时间是无限的，但我不能借助外部工具，我就发明不了大模型，也发明不了强化学习，这殊为遗憾。就像在实数轴上抽到有理数的概率为 0 ， 猴子胡乱敲键盘敲出莎士比亚集的概率比我研究明白强化学习的概率高。
+没有大模型的指导，我学不会强化学习；然而大模型的发明部分依赖强化学习。这引出一个猜想，如果我的研究时间无限，但不能借助外部工具，我就发明不了强化学习，这殊为遗憾。
 
 **前言 2**
 
-目前用的最多的强化学习算法是 PPO，然而 PPO 提出九年了，市面上能讲清楚 PPO 的教材和博客实在不多。本篇笔记综合多本教材和博客 [ 见文末 ]，以最短路径直入 PPO，即便如此，因为前置知识的需要，也只能将 PPO 排到 2.2.5 节叙述。
+目前用的最多的强化学习算法是 PPO，然而 PPO 提出九年了，市面上能给我讲清楚 PPO 的资料实在不多。本篇笔记综合多本教材和博客 [ 见文末 ]，以最短路径直入 PPO，即便如此，因为前置知识的需要，也只能将 PPO 排到 2.2.5 节叙述。
 
 # 1、基本概念
-## 1.1、 学习过程
+## 1.1、 学习过程和目标
 在典型的强化学习框架$`^{(注1)}`$中，智能体通过持续与环境交互来学习，它首先观察当前状态$`s_t`$，依据其策略$`\pi`$选择动作$`a_t`$，从环境中接收奖励$`r_{t+1}`$，随后转移到下一状态，直到该局(episode)结束T， 有序列：
 $`s_0, a_0, r_1, s_1, a_1, r_2, \ldots, s_{T-1}, a_{T-1}, r_T`$
-智能体从一次次的交互中学习到关于环境的知识并更新策略$`\pi`$，如图所示，其中<font style="color:#ECAA04;">黄色线条</font>表示<font style="color:#ECAA04;">一次学习步骤</font>的过程。<font style="color:#DF2A3F;">强化学习的目标即，找到使得奖励</font>$`func(r_1,r_2,...,r_T)`$<font style="color:#DF2A3F;"> 最大的策略, </font>这里的函数 $`func`$不是简单的加和，不同的方法可能会设定不同的目标函数 $`func`$，但都离不开<font style="color:#DF2A3F;">加权求和再求期望</font>的形式，见 1.2。
+智能体从一次次的交互中学习到关于环境的知识并更新策略$`\pi`$，如图所示，其中<font style="color:#ECAA04;">黄色线条</font>表示<font style="color:#ECAA04;">一次学习步骤</font>的过程。<font style="color:#DF2A3F;">强化学习的目标即，找到使得总奖励</font>$`G(r_1,r_2,...,r_T)`$<font style="color:#DF2A3F;"> 最大的策略</font>，$`G`$的具体定义见 1.2。
 
 <!-- 这是一张图片，ocr 内容为：动作A 动作AT 策略元 奖励R 价值9 环境 智能体 T(ALS;0) A(S, A;W) 价值网络(CRITIC) 环境 策略网络(ACTOR) 奖励R TT+1 状态8T ST+1 状态 基础框架 (A) (B)ACTOR-CRITIC算法 -->
 ![](assets/images/rl-figure-01.png)
 
- 这种交互可以表述为一个马尔可夫决策过程$`<S,A,P,R>`$，包含状态转移模型$`P`$、状态空间$`S`$、动作空间$`A`$、奖励$`R`$。若智能体对环境进行建模，估计一个环境模型$`<\hat P,\hat R>`$，该学习称为有模型学习；而通常在现实情境中，智能体很难对$`P`$或$`R`$完全建模，智能体依靠采样的轨迹 通过蒙特卡洛法$`^{(注1-2)}`$学习，称为无模型学习。目前大多数 RL 算法都是无模型的，本文要介绍的算法也都是无模型的$`^{(注1-3)}`$。
+ 这种交互学习方式可以表述为一个马尔可夫决策过程$`<S,A,P,R>`$，包含状态转移模型$`P`$、状态空间$`S`$、动作空间$`A`$、奖励$`R`$（下文大写的$`S,A`$等都表示随机变量）。若智能体对环境进行建模，估计一个环境模型$`<\hat P,\hat R>`$，该学习称为有模型学习；而通常在现实情境中，智能体很难对$`P`$或$`R`$精确建模，智能体只能依靠采样的轨迹 通过蒙特卡洛法$`^{(注1-2)}`$学习，这称为无模型学习。目前大多数 RL 算法都是无模型的，本文要介绍的算法也都是无模型的$`^{(注1-3)}`$。
 
-当采用随机策略，定义策略函数$`\pi: S \times A \mapsto[0,1]`$为概率密度函数$`\pi(a \mid s)=\mathbb{P}(A=a \mid S=s)`$。当采用确定策略，定义策略函数$`\pi: S \mapsto A`$。接下来除了 DDPG 一小节，其余都采用随机策略。
+当采用随机策略，定义策略函数$`\pi: S \times A \mapsto[0,1]`$为概率密度函数$`\pi(a \mid s)=\mathbb{P}(A=a \mid S=s)`$。当采用确定策略，定义策略函数$`\pi: S \mapsto A`$。接下来除了 DDPG 一小节，其余都采用随机策略。举个例子，把超级玛丽游戏当前屏幕上的画面作为观测$`s`$，训练时策略会输出每个动作的概率值：$`\pi(左|s)=0.5，\pi(右|s)=0.2,\pi(跳|s)=0.3`$，根据概率做抽样，得到一个动作$`a`$，让马里奥执行 ，执行后游戏环境返回$`s`$和$`r`$，策略根据$`s,a,r`$进行更新。
 
-## 1.2、 学习目标
+## 1.2、 策略优化的目标函数
 ### 1.2.1 回报
-<font style="color:#DF2A3F;">强化学习的目标是使总奖励尽可能大</font>，如 2024 年图灵奖得主、强化学习之父 Sutton 在书中所言，强化学习就是学习“做什么(即如何把当前的情境映射成动作)才能使得数值化的收益信号最大化”，<font style="color:#DF2A3F;">但这个总奖励怎么定义是有讲究的</font>。
+<font style="color:#DF2A3F;">强化学习的目标是找到一个使总奖励尽可能大的策略</font>，如强化学习之父 Sutton 所言，强化学习就是学习“做什么(即如何把当前的情境映射成动作)才能使得数值化的收益信号最大化”。对总奖励来说，一种最简单的定义方式是 $`r_1+r_2+...+r_T`$ 。<font style="color:#DF2A3F;">但要优化的总奖励目标函数还应该满足以下条件</font>：
 
 > [!NOTE]
-> 具体要优化的目标函数应该满足以下条件：
 >
 > a） 能递归分解：递归结构能让长期优化问题变成可学习的局部更新问题。
 >
@@ -44,12 +43,12 @@ G_t &= \sum_{i=t}^T \gamma^{(i-t)} R_{i+1} \\
   
 其中，$`\gamma`$是一个介于 0 和 1 之间的折扣因子，旨在平衡当前奖励与未来奖励的相对权重。$`\gamma`$越接近 1，越强调长期奖励，但设得过于接近 1 可能会影响训练性能。
 
-强化学习一般不会把回报作为目标函数，而是下一节的价值函数。
+一般把回报的期望作为强化学习的目标函数，即下一节的价值函数。
 
 ### 1.2.2 平均回报: 三个价值函数
-<font style="color:#DF2A3F;">在</font>$`t`$<font style="color:#DF2A3F;">时刻，回报 </font>$`G_t`$<font style="color:#DF2A3F;"> 是一个随机变量</font>$`^{(注2)}`$（下文大写的$`G,S,A`$都表示随机变量）。但智能体需要在 $`t`$时刻 预测 $`G_t`$ 的一个确定值，不然只有等一局结束才能更新策略。<font style="color:#DF2A3F;">此时， </font>$`G_t`$<font style="color:#DF2A3F;"> 取期望一方面可以消除其随机性，另一方面可以考虑到未来的延迟奖励。</font>
+<font style="color:#DF2A3F;">在</font>$`t`$<font style="color:#DF2A3F;">时刻，回报 </font>$`G_t`$<font style="color:#DF2A3F;"> 是一个随机变量</font>$`^{(注2)}`$。但智能体需要在 $`t`$时刻 预测 $`G_t`$ 的一个确定值，不然只有等一局结束才能更新策略。<font style="color:#DF2A3F;">此时，对 </font>$`G_t`$<font style="color:#DF2A3F;"> 取期望可以消除其随机性，考虑未来的延迟奖励。</font>
 
-**（笔者觉得期望这个词不容易记忆，其实期望可以记作平均，一种按概率加权的平均）**
+**（笔者觉得期望这个词不容易记忆，故这里将期望记作平均，因为期望就是按概率加权的平均值）**
 
 ---
 
@@ -72,9 +71,8 @@ A_i \sim \pi(\cdot \mid S_i),\; i \ge t+1
 
 $`Q^\pi`$依赖于$`s_t`$、$`a_t`$以及$`\pi`$，但不依赖于时间$`t+1`$及之后的状态和动作。
 
-**通俗来说，$`Q^{\pi}(s,a)`$ 就是某策略在状态 s 下执行动作 a 的价值。**
 
-**【$`Q^\pi`$ 可用于估计：给定策略 $`\pi`$ 和当前状态 $`s_t`$ 时，每个动作 $`a_t`$ 的好坏；“好”指回报 $`G_t`$ 高。】**
+**$`Q^{\pi}(s,a)`$ 就是某策略在状态 s 下执行动作 a 的价值。换句话说，$`Q^\pi`$ 可用于估计：给定策略 $`\pi`$ 和当前状态 $`s_t`$ 时，每个动作 $`a_t`$ 的好坏；“好”指回报 $`G_t`$ 高。：**
 
 ---
 
@@ -84,9 +82,7 @@ $`Q^\pi`$依赖于$`s_t`$、$`a_t`$以及$`\pi`$，但不依赖于时间$`t+1`$�
 $`Q^{\ast}\left(s_t, a_t\right)=\max _\pi Q^\pi\left(s_t, a_t\right)`$
 $`Q^*`$依赖于$`s_t`$、$`a_t`$，它与$`\pi`$无关。
 
-**通俗来说，$`Q^{*}(s,a)`$ 就是任意策略在状态 s 下执行动作 a 的最大价值。**
-
-**【$`Q^*`$ 可用于估计：给定状态 $`s_t`$ 时，每个动作 $`a_t`$ 的好坏。】**
+**$`Q^{*}(s,a)`$ 就是任意策略在状态 s 下执行动作 a 的最大价值。$`Q^*`$ 可用于估计：给定状态 $`s_t`$ 时，每个动作 $`a_t`$ 的好坏。】**
 
 <font style="color:#DF2A3F;">在强化学习中可指定目标函数为 </font>$`Q^*`$<font style="color:#DF2A3F;">，这称为价值学习。</font>常见的价值学习算法有Q-learning、DQN等。
 
@@ -98,9 +94,7 @@ $`Q^*`$依赖于$`s_t`$、$`a_t`$，它与$`\pi`$无关。
 $`V^\pi\left(s_t\right)=\mathbb{E}_{A_t \sim \pi(\cdot|s_t)}\left[Q^\pi\left(s_t, A_t\right)\right]`$
 $`V^\pi`$依赖于$`s_t`$、$`\pi`$，与$`a_t`$无关。
 
-**通俗来说，$`V^\pi`$ 就是状态 s 的平均价值。**
-
-**【$`V^\pi`$ 可用于估计：给定策略 $`\pi`$ 时，当前状态 $`s_t`$ 的好坏。】**
+**$`V^\pi`$ 就是状态 s 的平均价值。$`V^\pi`$ 可用于估计：给定策略 $`\pi`$ 时，当前状态 $`s_t`$ 的好坏。**
 
 $`V^\pi`$也能写成：
 
@@ -117,20 +111,32 @@ V^\pi\left(s_t\right)
 
 <font style="color:#DF2A3F;">在强化学习中可以指定目标函数为</font>$`\mathbb{E}_S\left[V^\pi(S)\right]`$<font style="color:#DF2A3F;">，这称为策略学习。</font>常见的策略学习算法有原始 Actor-Critic（以及改进版 A2C,A3C），TRPO/PPO，DDPG 以及 SAC 等。
 
+**（4）价值学习和策略学习：**
+
+| | 初始化输入 | 输出 | 优化目标 | 最终策略 |
+| --- | --- | --- | --- | --- |
+| 价值学习（Q-learning、DQN） | 初始$`Q^*(s,a)`$ 的近似 $`\hat{Q^*}_0`$ | $`Q^*(s,a)`$ 的优化近似$`\hat{Q^*}`$ | 贝尔曼误差 $`\mathbb{E}\left[\left(R+\gamma\max_{a'}\hat{Q^*}(s',a')-\hat{Q^*}(s,a)\right)^2\right]`$ | $`\pi(s)=\arg\max_a \hat{Q^*}(s,a)`$ |
+| 策略学习（PPO 等） | 初始策略 $`\pi_{\theta_0}`$ | 策略 $`\pi_\theta`$ | $`\mathbb{E}_S\left[V^\pi(S)\right]`$ | 输出$`\pi_{\theta_0}`$就是策略 |
+
 ---
 
-强化学习其实就是要解决 的问题即  优化上述目标函数，<font style="color:#DF2A3F;">在足够理想的情况下，强该问题都能用传统优化算法解决</font>（如遗传算法、模拟退火等算法）$`^{(注3)}`$。
+强化学习其实就是要解决 的问题即  优化上述目标函数，<font style="color:#DF2A3F;">在足够理想的情况下，问题能用传统优化算法解决</font>（如遗传算法、模拟退火等算法）$`^{(注3)}`$。
 
 ### 1.2.3 优势函数
 Baird 在论文 _"Advantage Updating"_(1993)  中明确提出了“优势更新”的概念，这通常被认为是优势函数概念最早的显式表述之一。他指出了使用优势值【即$`Q(s,a)−V(s)`$】来更新策略比直接使用 Q 值更有效。
 
 **优势函数**定义为：
-$`A^{\pi}(s,a)=Q^{\pi}(s,a)−V^{\pi}(s)`$
-+$`Q^{\pi}(s,a)`$：状态 s下执行动作 a 的价值
-+$`V^{\pi}(s)`$：状态 s的平均价值
+
+```math
+A^{\pi}(s,a)=Q^{\pi}(s,a)−V^{\pi}(s)
+```
+
+$`Q^{\pi}(s,a)`$：状态 s下执行动作 a 的价值，
+$`V^{\pi}(s)`$：状态 s的平均价值
 + <font style="color:#DF2A3F;">注意结合上下文区分代表动作随机变量大写的 </font>$`A`$<font style="color:#DF2A3F;"> 和这里的优势函数</font>$`A^{\pi}`$
 
- 优势 可以理解为 :                           **优势  =  这个动作的价值 − 该状态的平均价值**
+ 优势 可以理解为 :    
+                        **优势  =  这个动作的价值 − 该状态的平均价值**
 
 
 
@@ -140,7 +146,9 @@ $`A^{\pi}(s,a)=Q^{\pi}(s,a)−V^{\pi}(s)`$
 **当前价值  =  即时奖励 + 未来折扣价值的期望**
 
 根据回报的定义，不难验证贝尔曼递推关系：
-$`G_t = R_t+\gamma G_{t+1}`$
+```math
+G_t = R_t+\gamma G_{t+1}
+```
 从这个递推关系出发，结合价值函数定义，不难证明下面的几个贝尔曼方程：
 
 <font style="color:#DF2A3F;">贝尔曼期望方程</font>（也可看做<font style="color:#DF2A3F;">价值函数的递归定义</font>）：
@@ -150,9 +158,13 @@ $`G_t = R_t+\gamma G_{t+1}`$
 $`Q^\pi\left(s_t, a_t\right)=\mathbb{E}_{S_{t+1}, A_{t+1}}\left[R_t+\gamma \cdot Q^\pi\left(S_{t+1}, A_{t+1}\right) \mid S_t=s_t, A_t=a_t\right]`$.
 
 用$`V^\pi`$表示$`Q^\pi`$
+
 $`Q^\pi\left(s_t, a_t\right)=\mathbb{E}_{S_{t+1}}\left[R_t+\gamma \cdot V^\pi\left(S_{t+1}\right) \mid S_t=s_t, A_t=a_t\right].`$
+
 用$`V^\pi`$表示$`V^\pi`$
+
 $`V^{\pi}(s_t) = \mathbb{E}_{A_t, S_{t+1}} \left[ R_t + \gamma \, V^{\pi}(S_{t+1}) \mid S_t = s_t \right]`$
+
 **<font style="color:#DF2A3F;">贝尔曼残差</font>**（在数学里，残差即：模型应该满足的关系 − 实际预测之间的差）   
 
  Bellman residual =$`R_t+γV^\pi(s_{t+1})−V^\pi(s_t)`$
@@ -160,38 +172,45 @@ $`V^{\pi}(s_t) = \mathbb{E}_{A_t, S_{t+1}} \left[ R_t + \gamma \, V^{\pi}(S_{t+1
 **<font style="color:#DF2A3F;">贝尔曼期望方程推论：</font>**
 
 用$`V^\pi`$表示$`A^\pi`$
+
 $`A^\pi(s_t,a_t) = \mathbb{E}_{S_{t+1}} \left[ R_t+\gamma V^\pi(S_{t+1})-V^\pi(s_t) \mid S_t=s_t,A_t=a_t \right]`$
+
 用$`Q^\pi`$表示$`Q^\pi`$（多步版本）
+
 $`Q^\pi\left(s_t, a_t\right)=\mathbb{E}_{S_{t+1}, A_{t+1},...,S_{t+m}, A_{t+m}}\left[R_t+\gamma R_{t+1}+...+\gamma^{m-1}R_{t+m-1}+\gamma^{m} \cdot Q^\pi\left(S_{t+m}, A_{t+m}\right) \mid S_t=s_t, A_t=a_t\right]`$
-或者$`Q^\pi\left(s_t, a_t\right)=\mathbb{E}_{S_{t+1}, A_{t+1},...,S_{t+m}, A_{t+m}}\left[R_t+\gamma R_{t+1}+...+\gamma^{m-1}R_{t+m-1}+\gamma^{m} \cdot V^\pi\left(S_{t+m}\right) \mid S_t=s_t, A_t=a_t\right]`$
+
+或者 $`Q^\pi\left(s_t, a_t\right)=\mathbb{E}_{S_{t+1}, A_{t+1},...,S_{t+m}, A_{t+m}}\left[R_t+\gamma R_{t+1}+...+\gamma^{m-1}R_{t+m-1}+\gamma^{m} \cdot V^\pi\left(S_{t+m}\right) \mid S_t=s_t, A_t=a_t\right]`$
 
 **<font style="color:#DF2A3F;">贝尔曼最优方程</font>**：
+
 $`Q^{*}\left(s_t, a_t\right)=\mathbb{E}_{S_{t+1} \sim p\left(\cdot \mid s_t, a_t\right)}\left[R_t+\gamma \cdot \max _{A \in \mathcal{A}} Q^{*}\left(S_{t+1}, A\right) \mid S_t=s_t, A_t=a_t\right]`$
+
 表示**最优策略的每一步之后仍然是最优策略。**
 
 
 
 # 2、策略学习
-策略学习的意思是通过求解一个优化问题，学出最优策略函数或它的近似函数（比如策略网络）。
+上文提到，$`\mathbb{E}_S\left[V^\pi(S)\right]`$ 可用于估计策略 $`\pi`$ 的好坏。指定目标函数为$`\mathbb{E}_S\left[V^\pi(S)\right]`$，优化该目标学出最优策略函数或其近似函数，这称为策略学习。
 
-强化学习中智能体观察状态$`s_t`$，根据策略$`\pi`$选择动作$`a_t`$。上面提到，<font style="color:#DF2A3F;">若采用随机策略，则策略是概率密度函数</font>$`\pi(a|s;\theta): S \times A \mapsto[0,1]`$，其中$`\theta`$是函数中的可优化参数。举个例子，把超级玛丽游戏当前屏幕上的画面作为观测$`s`$，训练时策略会输出每个动作的概率值：$`\pi(左|s)=0.5，\pi(右|s)=0.2,\pi(跳|s)=0.3`$，根据概率做抽样，得到一个动作$`a`$，让马里奥执行 ，执行后游戏环境返回$`s`$和$`r`$再输入给策略。
+上面提到，智能体观察状态$`s_t`$，根据策略$`\pi`$选择动作$`a_t`$，<font style="color:#DF2A3F;">若采用随机策略，则策略是概率密度函数</font>$`\pi(a|s;\theta): S \times A \mapsto[0,1]`$，其中$`\theta`$是函数中的可优化参数。
 
-<font style="color:#DF2A3F;">怎么表示</font>$`\pi(a|s;\theta)`$<font style="color:#DF2A3F;">这个概率密度函数？</font>
+<font style="color:#DF2A3F;">如何表示概率密度函数</font>$`\pi(a|s;\theta)`$<font style="color:#DF2A3F;">？</font>
 
 （1）当问题足够简单，可以用数学表达式显式表示概率密度$`\pi(a|s;\theta)=function(a,s,\theta)`$;
 
 （2） 当 a 离散,$`\pi(a|s;\theta): S \times A \mapsto[0,1]`$可以用二维表格表示;
 
-（3）当 a 连续,  可用神经网络表示$`\pi(a|s;\theta)`$。先假设动作$`a`$是 服从 高斯分布$`\mathcal{N}(\mu, \sigma^2)`$（当然也可以是其他分布形式），只是分布具体参数未知。然后构造神经网络$`\pi_\theta`$,其中$`\theta`$是网络中待更新的参数。网络 输入是观测$`s`$,输出是 动作$`a`$的 分布参数$`\mu, \sigma`$。一般把这个神经网络称为<font style="color:#DF2A3F;">策略网络</font>。
+（3）当 a 连续,  可用神经网络表示$`\pi(a|s;\theta)`$。先假设动作$`a`$是 服从 高斯分布$`\mathcal{N}(\mu, \sigma^2)`$（当然也可以是其他分布形式），只是分布具体参数未知。然后构造神经网络$`\pi_\theta`$,其中$`\theta`$是网络中待更新的参数。网络 输入是观测$`s`$,输出是 动作$`a`$的 分布参数$`\mu, \sigma`$（有时只输出$`\mu`$,而$`\sigma`$从一个对称阵开始单独优化）。把这个神经网络称为<font style="color:#DF2A3F;">策略网络</font>。
 
-<font style="color:#DF2A3F;">怎么优化</font>$`\pi(a|s;\theta)`$<font style="color:#DF2A3F;">这个概率密度函数？</font>
+<font style="color:#DF2A3F;">如何优化</font>$`\pi(a|s;\theta)`$<font style="color:#DF2A3F;">？</font>
 
 第一节提到，$`\mathbb{E}_S\left[V^\pi(S)\right]`$可用于估计策略$`\pi`$的好坏，所以可以把$`\mathbb{E}_S\left[V^\pi(S)\right]`$作为优化目标。对于用策略网络表示$`\pi(a|s;\theta)`$的情形，定义策略网络目标函数:
 $`J({\theta})=\mathbb{E}_S\left[V^\pi(S)\right]`$
-目标是使其最大化。
+。目标是使其最大化。
 
 ## 2.1、策略梯度
-自然想到用<font style="color:#DF2A3F;">梯度上升</font>$`^{(注4-2)}`$<font style="color:#DF2A3F;"> </font>
+数值优化有很多方法，当目标函数可微，最常用的即基于梯度的方法。
+下面考虑用<font style="color:#DF2A3F;">梯度上升</font>$`^{(注4-2)}`$<font style="color:#DF2A3F;"> </font>
 $`{\theta} \leftarrow {\theta}+\beta \cdot \nabla_\theta J(\theta)`$
 来**<font style="color:#DF2A3F;">最大化</font>**$`J({\theta})`$, 其中$`\beta`$为学习率。
 
@@ -1201,7 +1220,7 @@ $`\nabla f(x_0,y_0)= \left( \left.\frac{\partial f}{\partial x}\right|_{(x_0,y_0
 
 与梯度垂直的方向$`z`$的 增长率为 0（ 方向导数为0）。
 
-同理可以推广到多元函数$`f(\theta)`$，当$`dim(\theta)>2`$。
+同理可以推广到多元函数$`f(\theta)`$，$`dim(\theta)>2`$。
 
 ### (注 5) 策略梯度定理证明
 见 王树森 7.3 ，或动手学 9.6，或 sutton 13.2
