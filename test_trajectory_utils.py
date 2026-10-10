@@ -130,6 +130,7 @@ class TestUnpad:
         # Logic: transpose(1,0) -> [n_traj, n_steps, feature_dim] -> flatten -> [10, feature_dim]
         # view(-1, n_steps, feature_dim) -> [2, 5, feature_dim]
         # transpose(1,0) -> [5, 2, feature_dim]
+
         output = unpad_trajectories(data, masks)
 
         assert output.shape == data.shape

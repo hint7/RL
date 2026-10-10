@@ -190,23 +190,23 @@ $`Q^{*}\left(s_t, a_t\right)=\mathbb{E}_{S_{t+1} \sim p\left(\cdot \mid s_t, a_t
 
 
 # 2、策略学习
-上文提到，$`\mathbb{E}_S\left[V^\pi(S)\right]`$ 可用于估计策略 $`\pi`$ 的好坏。指定目标函数为$`\mathbb{E}_S\left[V^\pi(S)\right]`$，优化该目标学出最优策略函数或其近似函数，这称为策略学习。
+上文提到，智能体观察状态$`s_t`$，根据策略$`\pi`$选择动作$`a_t`$。<font style="color:#DF2A3F;">若采用随机策略，则策略是条件分布</font>$`\pi(a|s;\theta)`$，其中$`\theta`$是函数中的可优化参数。动作离散时，$`\pi(\cdot|s;\theta)`$是概率质量函数：对固定的$`s`$，每个动作的概率落在$`[0,1]`$，且$`\sum_a\pi(a|s;\theta)=1`$。动作连续时，$`\pi(\cdot|s;\theta)`$是概率密度函数，密度值可以大于 1。
+$`\mathbb{E}_S\left[V^\pi(S)\right]`$ 可用于估计策略 $`\pi`$ 的好坏。
+指定目标函数为$`\mathbb{E}_S\left[V^\pi(S)\right]`$，优化该目标学出最优策略的近似，这称为策略学习。
 
-上面提到，智能体观察状态$`s_t`$，根据策略$`\pi`$选择动作$`a_t`$，<font style="color:#DF2A3F;">若采用随机策略，则策略是概率密度函数</font>$`\pi(a|s;\theta): S \times A \mapsto[0,1]`$，其中$`\theta`$是函数中的可优化参数。
+<font style="color:#DF2A3F;">如何表示</font>$`\pi(a|s;\theta)`$<font style="color:#DF2A3F;">？</font>
 
-<font style="color:#DF2A3F;">如何表示概率密度函数</font>$`\pi(a|s;\theta)`$<font style="color:#DF2A3F;">？</font>
+（1）问题足够简单时，用闭式表达式，例如$`\pi(a|s;\theta)\propto\exp(\theta^{\top}\phi(s,a))`$;
 
-（1）当问题足够简单，可以用数学表达式显式表示概率密度$`\pi(a|s;\theta)=function(a,s,\theta)`$;
+（2）$`S`$和$`A`$都是有限且规模不大的离散集合时，用$`|S|\times|A|`$的表格，每一行是一个概率分布;
 
-（2） 当 a 离散,$`\pi(a|s;\theta): S \times A \mapsto[0,1]`$可以用二维表格表示;
-
-（3）当 a 连续,  可用神经网络表示$`\pi(a|s;\theta)`$。先假设动作$`a`$是 服从 高斯分布$`\mathcal{N}(\mu, \sigma^2)`$（当然也可以是其他分布形式），只是分布具体参数未知。然后构造神经网络$`\pi_\theta`$,其中$`\theta`$是网络中待更新的参数。网络 输入是观测$`s`$,输出是 动作$`a`$的 分布参数$`\mu, \sigma`$（有时只输出$`\mu`$,而$`\sigma`$从一个对称阵开始单独优化）。把这个神经网络称为<font style="color:#DF2A3F;">策略网络</font>。
+（3）空间大到无法制表时，用神经网络近似，称为<font style="color:#DF2A3F;">策略网络</font>$`\pi_\theta`$。网络输入观测$`s`$，输出分布参数；$`\pi(a|s;\theta)`$由这些参数代回分布后算出。动作离散时，网络输出$`|A|`$维 logits，再经 softmax 得到各类概率。动作连续时，常设$`a|s\sim\mathcal{N}(\mu_\theta(s),\Sigma_\theta(s))`$（也可以是其他分布）。网络输出均值$`\mu`$；标准差可以随$`s`$由网络输出，通常先输出$`\log\sigma`$再取$`\exp`$以保证为正，也可以是与$`s`$无关、并入$`\theta`$一起更新的向量。动作是向量时，常用对角协方差，每个维度一个标准差。若用全协方差，则参数化其 Cholesky 因子，以保持协方差对称正定。
 
 <font style="color:#DF2A3F;">如何优化</font>$`\pi(a|s;\theta)`$<font style="color:#DF2A3F;">？</font>
 
-第一节提到，$`\mathbb{E}_S\left[V^\pi(S)\right]`$可用于估计策略$`\pi`$的好坏，所以可以把$`\mathbb{E}_S\left[V^\pi(S)\right]`$作为优化目标。对于用策略网络表示$`\pi(a|s;\theta)`$的情形，定义策略网络目标函数:
+把上述目标写成策略的目标函数
 $`J({\theta})=\mathbb{E}_S\left[V^\pi(S)\right]`$
-。目标是使其最大化。
+目标是使其最大化。
 
 ## 2.1、策略梯度
 数值优化有很多方法，当目标函数可微，最常用的即基于梯度的方法。
@@ -1139,15 +1139,23 @@ class PPOContinuous:
 
 13. 策略网络与值函数网络的独立 MLP:策略网络与值函数网络使用独立的多层感知机结构，避免参数共享带来的干扰。
 
-# 3、价值学习
-## 3.1、Q-learning
-## 3.2、DQN
-### 3.2.1、原始 DQN
-### 3.2.2、Double DQN
-### 3.2.3、Dueling DQN
-# 4、异策略
-## 4.1、DDPG
-## 4.2、SAC
+# 3、异策略
+## 3.1、DDPG
+## 3.2、SAC
+# 4、价值学习
+
+| | 同策略 (on-policy) | 异策略 (off-policy) |
+| --- | --- | --- |
+| 价值学习 | SARSA 等 | Q-learning、DQN |
+| 策略学习 | REINFORCE、A2C、PPO | DDPG、SAC |
+
+## 4.1、SARSA
+## 4.2、Q-learning
+## 4.3、DQN
+### 4.3.1、原始 DQN
+### 4.3.2、Double DQN
+### 4.3.3、Dueling DQN
+
 
 
 _________________________________________
