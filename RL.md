@@ -117,10 +117,10 @@ V^\pi\left(s_t\right)
 
 **（4）价值学习和策略学习：**
 
-| | 初始化输入 | 输出 | 优化目标 | 最终策略 |
+| | 初始化输入 | 输出 | 目标函数 | 最终策略 |
 | --- | --- | --- | --- | --- |
-| 价值学习（Q-learning、DQN） | 初始$`Q^*(s,a)`$ 的近似 $`\hat{Q^*}_0`$ | $`Q^*(s,a)`$ 的优化近似$`\hat{Q^*}`$ | 贝尔曼误差 $`\mathbb{E}\left[\left(R+\gamma\max_{a'}\hat{Q^*}(s',a')-\hat{Q^*}(s,a)\right)^2\right]`$ | $`\pi(s)=\arg\max_a \hat{Q^*}(s,a)`$ |
-| 策略学习（PPO 等） | 初始策略 $`\pi_{\theta_0}`$ | 策略 $`\pi_\theta`$ | $`\mathbb{E}_S\left[V^\pi(S)\right]`$ | 输出$`\pi_{\theta_0}`$就是策略 |
+| 价值学习（Q-learning、DQN） | $`Q^*(s,a)`$ 的初始近似 $`{\hat{Q}^*}_0`$ | $`Q^*(s,a)`$ 的优化近似$`\hat{Q}^*`$ | 贝尔曼误差 $`\mathbb{E}\left[\left(R+\gamma\max_{a'}\hat{Q}^*(s',a')-\hat{Q}^*(s,a)\right)^2\right]`$ | $`\pi(s)=\arg\max_a \hat{Q}^*(s,a)`$ |
+| 策略学习（PPO 等） | 初始策略 $`\pi_{\theta_0}`$ | 策略 $`\pi_\theta`$ | $`\mathbb{E}_S\left[V^\pi(S)\right]`$ | 输出$`\pi_{\theta}`$就是策略 |
 
 ---
 
